@@ -14,8 +14,5 @@
 
 ```console
 pip install astro-sph-tools
+pip install https://github.com/QuasarX1/astro-sph-tools.git
 ```
-
-## License
-
-`astro-sph-tools` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
