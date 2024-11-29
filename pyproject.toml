@@ -22,6 +22,13 @@ classifiers = [
 ]
 dependencies = [
   "QuasarCode",
+  "numpy",
+  "matplotlib",
+  "h5py",
+  "unyt",
+  "swiftsimio",
+  "pyread_eagle",
+  "atomic_weights",
 ]
 
 [project.urls]

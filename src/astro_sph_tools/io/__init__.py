@@ -3,8 +3,5 @@
 # SPDX-License-Identifier: LicenseRef-NotYetLicensed
 
 from . import data_structures
-from . import io
-
-from .data_structures import ParticleType
-from .io.EAGLE import FileTreeScraper_EAGLE
-#from .io.SWIFT import FileTreeScraper_SWIFT
+from . import EAGLE
+from . import SWIFT
