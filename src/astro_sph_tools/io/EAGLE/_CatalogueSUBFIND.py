@@ -124,7 +124,14 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
         )
 
     def get_FOF_field(self, field: str, particle_type: ParticleType|None = None, dtype = float) -> tuple[np.ndarray, float, float, float]:
-        result = np.empty(self.__n_total_FOF_groups, dtype = dtype)
+        with h5.File(self.__halo_data_files[0], "r") as file:
+            conversion_values = (
+                file["FOF"][field].attrs["h-scale-exponent"],
+                file["FOF"][field].attrs["aexp-scale-exponent"],
+                file["FOF"][field].attrs["CGSConversionFactor"]
+            )
+            field_element_shape = file["FOF"][field].shape[1:]
+        result = np.empty((self.__n_total_FOF_groups, *field_element_shape), dtype = dtype)
         for i in range(self.__n_parallel_components_properties):
             if self.__n_FOF_groups_per_file[i] == 0:
                 continue
@@ -132,12 +139,6 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
 #            result[chunk] = self.__halo_data_files[i]["FOF"][field][:]
             with h5.File(self.__halo_data_files[i], "r") as file:
                 result[chunk] = file["FOF"][field][:]
-        with h5.File(self.__halo_data_files[0], "r") as file:
-            conversion_values = (
-                file["FOF"][field].attrs["h-scale-exponent"],
-                file["FOF"][field].attrs["aexp-scale-exponent"],
-                file["FOF"][field].attrs["CGSConversionFactor"]
-            )
         return (
             result[self.__FOF_groups_containing_parttypes[particle_type]],
             *conversion_values

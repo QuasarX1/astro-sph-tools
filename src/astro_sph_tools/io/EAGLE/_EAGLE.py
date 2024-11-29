@@ -340,7 +340,7 @@ class SimulationSnapOrSnipCatalogueFiles_EAGLE(SimulationFileTreeBase[CatalogueS
     def find_file_number_from_redshift(self, redshift: float) -> str:
         file_numbers = np.array(self.get_numbers(), dtype = str)
         file_numbers = file_numbers[np.array([float(v) for v in file_numbers], dtype = float).argsort()]
-        file_redshifts = np.array([self.get_by_number(file_number).redshift for file_number in file_numbers], dtype = float)
+        file_redshifts = np.array([self.get_by_number(file_number).tag_redshift for file_number in file_numbers], dtype = float)
         prior_files_mask = file_redshifts >= redshift
         if prior_files_mask.sum() == 0:
             raise FileNotFoundError(f"Unable to find search data for a file with a redshift of (or exceding) {redshift}.\nThe first file has a redshift of {file_redshifts[0]}.")
@@ -394,6 +394,10 @@ class FileTreeScraper_EAGLE(object):
         self.__snipshots = SimulationSnipshotFiles_EAGLE(filepath, skip_numbers = skip_snipshot_numbers)
         self.__snapshot_catalogues = SimulationSnapshotCatalogueFiles_EAGLE(filepath, self.__snapshots, skip_numbers = skip_snapshot_numbers)
         self.__snipshot_catalogues = SimulationSnipshotCatalogueFiles_EAGLE(filepath, self.__snipshots, skip_numbers = skip_snipshot_numbers)
+
+    @property
+    def directory(self) -> str:
+        return self.__root_directory
 
     @property
     def snapshots(self) -> SimulationSnapshotFiles_EAGLE:
