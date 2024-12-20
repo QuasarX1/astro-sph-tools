@@ -168,7 +168,11 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
             raise NotImplementedError("include_unbound param not supported for EAGLE data.")
         group_numbers = self.get_membership_field("GroupNumber", particle_type, int)[0]
         fof_group_only_mask = group_numbers > 0
-        return ArrayReorder.create(self.get_membership_field("ParticleIDs", particle_type, int)[0], snapshot_particle_ids if snapshot_particle_ids is not None else self.snapshot.get_IDs(particle_type), source_order_filter = fof_group_only_mask)(group_numbers, default_value = -1) - 1
+        return ArrayReorder.create(
+            self.get_membership_field("ParticleIDs", particle_type, int)[0],
+            snapshot_particle_ids if snapshot_particle_ids is not None else self.snapshot.get_IDs(particle_type),
+            source_order_filter = fof_group_only_mask
+        )(group_numbers, default_value = -1) - 1
 
     def get_particle_IDs(self, particle_type: ParticleType, include_unbound: bool = True) -> np.ndarray:
         if not include_unbound:

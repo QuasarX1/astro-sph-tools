@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "cython", "numpy", "hatch-cython"]
 build-backend = "hatchling.build"
 
 [project]
@@ -29,6 +29,7 @@ dependencies = [
   "swiftsimio",
   "pyread_eagle",
   "atomic_weights",
+  "Cython",
 ]
 
 [project.urls]
@@ -41,6 +42,52 @@ ast = "astro_sph_tools._scripts.ast:main"
 
 [tool.hatch.version]
 path = "src/astro_sph_tools/__about__.py"
+
+[project.entry-points.hatch]
+cython = "hatch_cython.hooks"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/astro_sph_tools"]
+
+# See https://github.com/joshua-auchincloss/hatch-cython?tab=readme-ov-file
+
+[tool.hatch.build.targets.wheel.hooks.cython]
+dependencies = ["hatch-cython"]
+
+[tool.hatch.build.targets.wheel.hooks.cython.options]
+includes = []
+include_numpy = false
+include_pyarrow = false
+
+compile_args = [
+  "-v",
+  # by platform
+  { platforms = ["linux", "darwin"], arg = "-Wcpp" },
+  # by platform & arch
+  { platforms = "darwin", arch = "x86_64", arg = "-arch x86_64" },
+  { platforms = ["darwin"], arch = "arm64", arg = "-arch arm64" },
+  # with pep508 markers
+  { platforms = ["darwin"], arch = "x86_64", arg = "-I/usr/local/opt/llvm/include", depends_path = true, marker = "python_version >= '3.12'"  },
+]
+
+directives = { boundscheck = false, nonecheck = false, language_level = 3, binding = true }
+
+compile_kwargs = { }
+
+#modules = [
+#  "src/astro_sph_tools/tools/projections/_kernels.pyx",
+#  "src/astro_sph_tools/tools/projections/_pixel_calculations.pyx",
+#]
+targets = [
+  "src/astro_sph_tools/tools/projections/_kernels.pyx",
+  "src/astro_sph_tools/tools/projections/_pixel_calculations.pyx",
+]
+
+#[tool.hatch.build.targets.wheel.hooks.cython.options.files]
+#targets = [
+#  "src/astro_sph_tools/tools/projections/_kernels.pyx",
+#  "src/astro_sph_tools/tools/projections/_pixel_calculations.pyx",
+#]
 
 [tool.hatch.envs.default]
 python = "3.12"
