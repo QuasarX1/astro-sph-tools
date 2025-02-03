@@ -12,7 +12,7 @@ class ISimulation(Interface):
     """
     Interface for types that specify data belonging to a named simulation dataset (e.g. EAGLE).
     """
-    def __new__(cls, *args, **kwargss):
+    def __new__(cls, *args, **kwargs):
         ensure_not_interface(cls, ISimulation)
         return super().__new__(cls)
 

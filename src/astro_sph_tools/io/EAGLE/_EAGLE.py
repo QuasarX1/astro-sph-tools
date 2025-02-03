@@ -132,6 +132,9 @@ class SimulationSnapOrSnipFiles_EAGLE(SimulationFileTreeBase[SnapshotEAGLE], Gen
         if tag not in self.__file_lookup_by_tag:
             raise KeyError(f"{self.__file_type_string.title()} tag \"{tag}\" not avalible.")
         return self.__file_lookup_by_tag[tag]
+
+    def get_by_redshift(self, redshift: float) -> T:
+        return self.get_by_number(self.find_file_number_from_redshift(redshift))
     
     def find_file_number_from_redshift(self, redshift: float) -> str:
         file_numbers = np.array(self.get_numbers(), dtype = str)
@@ -336,6 +339,9 @@ class SimulationSnapOrSnipCatalogueFiles_EAGLE(SimulationFileTreeBase[CatalogueS
         if tag not in self.__file_lookup_by_tag:
             raise KeyError(f"{self.__file_type_string.title()} tag \"{tag}\" not avalible.")
         return self.__file_lookup_by_tag[tag]
+
+    def get_by_redshift(self, redshift: float) -> U:
+        return self.get_by_number(self.find_file_number_from_redshift(redshift))
     
     def find_file_number_from_redshift(self, redshift: float) -> str:
         file_numbers = np.array(self.get_numbers(), dtype = str)

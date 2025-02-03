@@ -30,6 +30,7 @@ dependencies = [
   "pyread_eagle",
   "atomic_weights",
   "Cython",
+  "mendeleev",
 ]
 
 [project.urls]
@@ -39,6 +40,7 @@ Source = "https://github.com/QuasarX1/astro-sph-tools"
 
 [project.scripts]
 ast = "astro_sph_tools._scripts.ast:main"
+ast-find-nearest-haloes = "astro_sph_tools._scripts.find_nearest_haloes:main"
 
 [tool.hatch.version]
 path = "src/astro_sph_tools/__about__.py"

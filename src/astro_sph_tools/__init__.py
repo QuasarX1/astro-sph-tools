@@ -6,6 +6,8 @@ from . import data_structures
 from . import io
 from . import tools
 
+from ._CoordinateAxes import CoordinateAxes
+
 from .data_structures import ParticleType
 from .io.EAGLE import FileTreeScraper_EAGLE
 #from .io.SWIFT import FileTreeScraper_SWIFT
