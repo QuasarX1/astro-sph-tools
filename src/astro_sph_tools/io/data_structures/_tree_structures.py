@@ -52,7 +52,7 @@ class ISimulationFileTree(Interface, Iterable, Sized):
     def __len__(self) -> int:
         raise NotImplementedError()
     @abstractmethod
-    def __get_item__(self, key: int|slice) -> ISimulationFileTreeLeaf|tuple[ISimulationFileTreeLeaf, ...]:
+    def __getitem__(self, key: int|slice) -> ISimulationFileTreeLeaf|tuple[ISimulationFileTreeLeaf, ...]:
         raise NotImplementedError()
     @abstractmethod
     def get_info(self) -> tuple[ISimulationFileTreeLeaf, ...]:
@@ -74,7 +74,7 @@ class SimulationFileTreeBase(Generic[T_ISimulationData], ISimulationFileTree):
     def __iter__(self) -> Iterator[SimulationFileTreeLeafBase[T_ISimulationData]]:
         raise NotImplementedError()
     @abstractmethod
-    def __get_item__(self, key: int|slice) -> SimulationFileTreeLeafBase[T_ISimulationData]|tuple[SimulationFileTreeLeafBase[T_ISimulationData], ...]:
+    def __getitem__(self, key: int|slice) -> SimulationFileTreeLeafBase[T_ISimulationData]|tuple[SimulationFileTreeLeafBase[T_ISimulationData], ...]:
         raise NotImplementedError()
     @abstractmethod
     def get_info(self) -> tuple[SimulationFileTreeLeafBase[T_ISimulationData], ...]:

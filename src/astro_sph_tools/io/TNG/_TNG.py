@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2024-present Christopher Rowe <chris.rowe19@outlook.com>
+# SPDX-FileCopyrightText: 2025-present Christopher Rowe <chris.rowe19@outlook.com>
 #
 # SPDX-License-Identifier: LicenseRef-NotYetLicensed
 
@@ -13,13 +13,13 @@ from QuasarCode import Console
 
 from ..data_structures._tree_structures import SimulationFileTreeBase, SimulationFileTreeLeafBase
 from ..data_structures._FileTreeScraper import FileTreeScraperBase
-from ._sim_type import SimType_EAGLE
-from ._SnapshotEAGLE import SnapshotEAGLE
-from ._CatalogueSUBFIND import CatalogueSUBFIND
+from ._sim_type import SimType_TNG
+from ._SnapshotTNG import SnapshotTNG
+from ._CatalogueSUBFIND_TNG import CatalogueSUBFIND_TNG
 
 
 
-class SnapOrSnipFiles_EAGLE(SimulationFileTreeLeafBase[SnapshotEAGLE]):
+class SnapOrSnipFiles_TNG(SimulationFileTreeLeafBase[SnapshotTNG]):
     def __init__(self, number: str, tag: str, filepath: str, all_filepaths: Iterable[str]):
         self.__number = number
         self.__tag = tag
@@ -28,8 +28,8 @@ class SnapOrSnipFiles_EAGLE(SimulationFileTreeLeafBase[SnapshotEAGLE]):
         self.__approximate_redshift = float(".".join(self.__tag.split("z")[1].split("p")))
     def __len__(self) -> int:
         return len(self.__filepaths)
-    def load(self) -> SnapshotEAGLE:
-        return SnapshotEAGLE(self.__filepath)
+    def load(self) -> SnapshotTNG:
+        return SnapshotTNG(self.__filepath)
     @property
     def number(self) -> str:
         return self.__number
@@ -51,9 +51,9 @@ class SnapOrSnipFiles_EAGLE(SimulationFileTreeLeafBase[SnapshotEAGLE]):
     @property
     def filepath(self) -> str:
         return self.__filepath
-T = TypeVar("T", bound = SnapOrSnipFiles_EAGLE)
+T = TypeVar("T", bound = SnapOrSnipFiles_TNG)
 
-class SimulationSnapOrSnipFiles_EAGLE(SimulationFileTreeBase[SnapshotEAGLE], Generic[T]):
+class SimulationSnapOrSnipFiles_TNG(SimulationFileTreeBase[SnapshotTNG], Generic[T]):
     _snapshot_pattern = re.compile(r'.*snapshot_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]snap_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
     _snipshot_pattern = re.compile(r'.*snipshot_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]snip_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
     def __init__(self, directory: str, snipshots: bool, file_type: type[T], skip_numbers: list[str]|None = None):
@@ -152,52 +152,52 @@ class SimulationSnapOrSnipFiles_EAGLE(SimulationFileTreeBase[SnapshotEAGLE], Gen
 
 
 
-class SnapshotFiles_EAGLE(SnapOrSnipFiles_EAGLE):
+class SnapshotFiles_TNG(SnapOrSnipFiles_TNG):
     pass
 
-class SimulationSnapshotFiles_EAGLE(SimulationSnapOrSnipFiles_EAGLE[SnapshotFiles_EAGLE]):
+class SimulationSnapshotFiles_TNG(SimulationSnapOrSnipFiles_TNG[SnapshotFiles_TNG]):
     def __init__(self, directory: str, skip_numbers: list[str]|None = None):
         super().__init__(
             directory,
             snipshots = False,
-            file_type = SnapshotFiles_EAGLE,
+            file_type = SnapshotFiles_TNG,
             skip_numbers = skip_numbers
         )
 
-    def __iter__(self) -> Iterator[SnapshotFiles_EAGLE]:
+    def __iter__(self) -> Iterator[SnapshotFiles_TNG]:
         return super().__iter__()
 
 
 
-class SnipshotFiles_EAGLE(SnapOrSnipFiles_EAGLE):
+class SnipshotFiles_TNG(SnapOrSnipFiles_TNG):
     pass
 
-class SimulationSnipshotFiles_EAGLE(SimulationSnapOrSnipFiles_EAGLE[SnipshotFiles_EAGLE]):
+class SimulationSnipshotFiles_TNG(SimulationSnapOrSnipFiles_TNG[SnipshotFiles_TNG]):
     def __init__(self, directory: str, skip_numbers: list[str]|None = None):
         super().__init__(
             directory,
             snipshots = True,
-            file_type = SnipshotFiles_EAGLE,
+            file_type = SnipshotFiles_TNG,
             skip_numbers = skip_numbers
         )
 
-    def __iter__(self) -> Iterator[SnipshotFiles_EAGLE]:
+    def __iter__(self) -> Iterator[SnipshotFiles_TNG]:
         return super().__iter__()
 
 
 
-class SnapOrSnipCatalogueFiles_EAGLE(SimulationFileTreeLeafBase[CatalogueSUBFIND]):
-    def __init__(self, number: str, tag: str, membership_filepaths: list[str], properties_filepaths: list[str], raw_particlre_data_info: SnapOrSnipFiles_EAGLE):
+class SnapOrSnipCatalogueFiles_TNG(SimulationFileTreeLeafBase[CatalogueSUBFIND_TNG]):
+    def __init__(self, number: str, tag: str, membership_filepaths: list[str], properties_filepaths: list[str], raw_particlre_data_info: SnapOrSnipFiles_TNG):
         self.__number = number
         self.__tag = tag
         self.__membership_filepaths = membership_filepaths
         self.__properties_filepaths = properties_filepaths
-        self.__snapshot_info: SnapOrSnipFiles_EAGLE = raw_particlre_data_info
+        self.__snapshot_info: SnapOrSnipFiles_TNG = raw_particlre_data_info
         self.__approximate_redshift = float(".".join(self.__tag.split("z")[1].split("p")))
     def __len__(self) -> int:
         return len(self.__properties_filepaths)
-    def load(self) -> CatalogueSUBFIND:
-        return CatalogueSUBFIND(self.__membership_filepaths, self.__properties_filepaths, self.__snapshot_info.load())
+    def load(self) -> CatalogueSUBFIND_TNG:
+        return CatalogueSUBFIND_TNG(self.__membership_filepaths, self.__properties_filepaths, self.__snapshot_info.load())
     @property
     def number(self) -> str:
         return self.__number
@@ -232,13 +232,13 @@ class SnapOrSnipCatalogueFiles_EAGLE(SimulationFileTreeLeafBase[CatalogueSUBFIND
     def properties_filepaths(self) -> tuple[str, ...]:
         return tuple(self.__properties_filepaths)
 
-U = TypeVar("U", bound = SnapOrSnipCatalogueFiles_EAGLE)
-class SimulationSnapOrSnipCatalogueFiles_EAGLE(SimulationFileTreeBase[CatalogueSUBFIND], Generic[U, T]):
-    _snapshot_catalogue_membership_pattern = re.compile(r'.*particledata_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]eagle_subfind_particles_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
-    _snipshot_catalogue_membership_pattern = re.compile(r'.*particledata_snip_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]eagle_subfind_snip_particles_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
-    _snapshot_catalogue_properties_pattern = re.compile(r'.*groups_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]eagle_subfind_tab_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
-    _snipshot_catalogue_properties_pattern = re.compile(r'.*groups_snip_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]eagle_subfind_snip_tab_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
-    def __init__(self, directory: str, snipshots: bool, file_type: type[U], raw_particle_data_info: SimulationSnapOrSnipFiles_EAGLE[T], skip_numbers: list[str]|None = None):
+U = TypeVar("U", bound = SnapOrSnipCatalogueFiles_TNG)
+class SimulationSnapOrSnipCatalogueFiles_TNG(SimulationFileTreeBase[CatalogueSUBFIND_TNG], Generic[U, T]):
+    _snapshot_catalogue_membership_pattern = re.compile(r'.*particledata_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]TNG_subfind_particles_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
+    _snipshot_catalogue_membership_pattern = re.compile(r'.*particledata_snip_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]TNG_subfind_snip_particles_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
+    _snapshot_catalogue_properties_pattern = re.compile(r'.*groups_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]TNG_subfind_tab_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
+    _snipshot_catalogue_properties_pattern = re.compile(r'.*groups_snip_(?P<number>\d{3})_z(?P<redshift_int>\d+)p(?P<redshift_dec>\d+)[\\/]TNG_subfind_snip_tab_(?P=number)_z(?P=redshift_int)p(?P=redshift_dec)\.(?P<parallel_index>\d+)\.(?P<extension>\w+)$')
+    def __init__(self, directory: str, snipshots: bool, file_type: type[U], raw_particle_data_info: SimulationSnapOrSnipFiles_TNG[T], skip_numbers: list[str]|None = None):
         super().__init__(directory)
 
         if skip_numbers is None:
@@ -273,7 +273,7 @@ class SimulationSnapOrSnipCatalogueFiles_EAGLE(SimulationFileTreeBase[CatalogueS
 
                     tag = f"{number}_z{redshift_int}p{redshift_dec}"
                     if is_properties:
-                        basename = os.path.join(f"groups_{tag}", f"eagle_subfind_tab_{tag}") if not snipshots else os.path.join(f"groups_snip_{tag}", f"eagle_subfind_snip_tab_{tag}")
+                        basename = os.path.join(f"groups_{tag}", f"TNG_subfind_tab_{tag}") if not snipshots else os.path.join(f"groups_snip_{tag}", f"TNG_subfind_snip_tab_{tag}")
                         if tag not in self.__scraped_properties_info:
                             self.__scraped_properties_info[tag] = (number, basename, extension, [parallel_index])
                         else:
@@ -281,7 +281,7 @@ class SimulationSnapOrSnipCatalogueFiles_EAGLE(SimulationFileTreeBase[CatalogueS
                             assert extension == self.__scraped_properties_info[tag][2]
                             self.__scraped_properties_info[tag][3].append(parallel_index)
                     else:
-                        basename = os.path.join(f"particledata_{tag}", f"eagle_subfind_particles_{tag}") if not snipshots else os.path.join(f"particledata_snip_{tag}", f"eagle_subfind_snip_particles_{tag}")
+                        basename = os.path.join(f"particledata_{tag}", f"TNG_subfind_particles_{tag}") if not snipshots else os.path.join(f"particledata_snip_{tag}", f"TNG_subfind_snip_particles_{tag}")
                         if tag not in self.__scraped_membership_info:
                             self.__scraped_membership_info[tag] = (number, basename, extension, [parallel_index])
                         else:
@@ -359,74 +359,74 @@ class SimulationSnapOrSnipCatalogueFiles_EAGLE(SimulationFileTreeBase[CatalogueS
 
 
 
-class SnapshotCatalogueFiles_EAGLE(SnapOrSnipCatalogueFiles_EAGLE):
+class SnapshotCatalogueFiles_TNG(SnapOrSnipCatalogueFiles_TNG):
     pass
 
-class SimulationSnapshotCatalogueFiles_EAGLE(SimulationSnapOrSnipCatalogueFiles_EAGLE[SnapshotCatalogueFiles_EAGLE, SnapshotFiles_EAGLE]):
-    def __init__(self, directory: str, snapshot_info: SimulationSnapshotFiles_EAGLE, skip_numbers: list[str]|None = None):
+class SimulationSnapshotCatalogueFiles_TNG(SimulationSnapOrSnipCatalogueFiles_TNG[SnapshotCatalogueFiles_TNG, SnapshotFiles_TNG]):
+    def __init__(self, directory: str, snapshot_info: SimulationSnapshotFiles_TNG, skip_numbers: list[str]|None = None):
         super().__init__(
             directory,
             snipshots = False,
-            file_type = SnapshotCatalogueFiles_EAGLE,
+            file_type = SnapshotCatalogueFiles_TNG,
             raw_particle_data_info = snapshot_info,
             skip_numbers = skip_numbers
         )
 
-    def __iter__(self) -> Iterator[SnapshotCatalogueFiles_EAGLE]:
+    def __iter__(self) -> Iterator[SnapshotCatalogueFiles_TNG]:
         return super().__iter__()
 
 
 
-class SnipshotCatalogueFiles_EAGLE(SnapOrSnipCatalogueFiles_EAGLE):
+class SnipshotCatalogueFiles_TNG(SnapOrSnipCatalogueFiles_TNG):
     pass
 
-class SimulationSnipshotCatalogueFiles_EAGLE(SimulationSnapOrSnipCatalogueFiles_EAGLE[SnipshotCatalogueFiles_EAGLE, SnipshotFiles_EAGLE]):
-    def __init__(self, directory: str, snipshot_info: SimulationSnipshotFiles_EAGLE, skip_numbers: list[str]|None = None):
+class SimulationSnipshotCatalogueFiles_TNG(SimulationSnapOrSnipCatalogueFiles_TNG[SnipshotCatalogueFiles_TNG, SnipshotFiles_TNG]):
+    def __init__(self, directory: str, snipshot_info: SimulationSnipshotFiles_TNG, skip_numbers: list[str]|None = None):
         super().__init__(
             directory,
             snipshots = True,
-            file_type = SnipshotCatalogueFiles_EAGLE,
+            file_type = SnipshotCatalogueFiles_TNG,
             raw_particle_data_info = snipshot_info,
             skip_numbers = skip_numbers
         )
 
-    def __iter__(self) -> Iterator[SnipshotCatalogueFiles_EAGLE]:
+    def __iter__(self) -> Iterator[SnipshotCatalogueFiles_TNG]:
         return super().__iter__()
 
 
 
-class FileTreeScraper_EAGLE(FileTreeScraperBase[SimType_EAGLE]):
+class FileTreeScraper_TNG(FileTreeScraperBase[SimType_TNG]):
     def __init__(self, filepath: str, skip_snapshot_numbers: list[str]|None = None, skip_snipshot_numbers: list[str]|None = None) -> None:
         super().__init__({ "root": filepath }, skip_snapshot_numbers, skip_snipshot_numbers)
-        self.__snapshots = SimulationSnapshotFiles_EAGLE(filepath, skip_numbers = list(self.skipped_snapshot_numbers))
-        self.__snipshots = SimulationSnipshotFiles_EAGLE(filepath, skip_numbers = list(self.skipped_snipshot_numbers))
-        self.__snapshot_catalogues = SimulationSnapshotCatalogueFiles_EAGLE(filepath, self.__snapshots, skip_numbers = list(self.skipped_snapshot_numbers))
-        self.__snipshot_catalogues = SimulationSnipshotCatalogueFiles_EAGLE(filepath, self.__snipshots, skip_numbers = list(self.skipped_snipshot_numbers))
+        self.__snapshots = SimulationSnapshotFiles_TNG(filepath, skip_numbers = list(self.skipped_snapshot_numbers))
+        self.__snipshots = SimulationSnipshotFiles_TNG(filepath, skip_numbers = list(self.skipped_snipshot_numbers))
+        self.__snapshot_catalogues = SimulationSnapshotCatalogueFiles_TNG(filepath, self.__snapshots, skip_numbers = list(self.skipped_snapshot_numbers))
+        self.__snipshot_catalogues = SimulationSnipshotCatalogueFiles_TNG(filepath, self.__snipshots, skip_numbers = list(self.skipped_snipshot_numbers))
 
     @property
     def directory(self) -> str:
         return self.root_directories["root"]
 
     @property
-    def snapshots(self) -> SimulationSnapshotFiles_EAGLE: # type: ignore
+    def snapshots(self) -> SimulationSnapshotFiles_TNG: # type: ignore
         return self.__snapshots
 
     @property
-    def snipshots(self) -> SimulationSnipshotFiles_EAGLE: # type: ignore
+    def snipshots(self) -> SimulationSnipshotFiles_TNG: # type: ignore
         return self.__snipshots
 
     @property
-    def catalogues(self) -> SimulationSnapshotCatalogueFiles_EAGLE: # type: ignore
+    def catalogues(self) -> SimulationSnapshotCatalogueFiles_TNG: # type: ignore
         return self.__snapshot_catalogues
 
     @property
-    def snipshot_catalogues(self) -> SimulationSnipshotCatalogueFiles_EAGLE: # type: ignore
+    def snipshot_catalogues(self) -> SimulationSnipshotCatalogueFiles_TNG: # type: ignore
         return self.__snipshot_catalogues
 
     @staticmethod
     def split_filepath(filepath: str) -> tuple[str, str]:
         """
-        Split the filepath of an EAGLE data file into the
+        Split the filepath of an TNG data file into the
         """
         absolute_filepath = os.path.abspath(filepath)
         folder, file = os.path.split(absolute_filepath)
@@ -436,16 +436,16 @@ class FileTreeScraper_EAGLE(FileTreeScraperBase[SimType_EAGLE]):
     @staticmethod
     def directory_from_filepath(filepath: str) -> str:
         """
-        Gets the path of the EAGLE data directory from a path to a simulation data file.
+        Gets the path of the TNG data directory from a path to a simulation data file.
         """
-        return FileTreeScraper_EAGLE.split_filepath(filepath)[0]
+        return FileTreeScraper_TNG.split_filepath(filepath)[0]
 
     @staticmethod
     def relative_filepath(filepath: str) -> str:
         """
         Get the component of a filepath relative to the simulation data directory.
         """
-        return FileTreeScraper_EAGLE.split_filepath(filepath)[1]
+        return FileTreeScraper_TNG.split_filepath(filepath)[1]
 
     @staticmethod
     def make_filepath_with_root(directory: str, relative_filepath: str) -> str:
@@ -458,17 +458,17 @@ class FileTreeScraper_EAGLE(FileTreeScraperBase[SimType_EAGLE]):
         """
         Get the path to a data file given the relative location of the file to the root directory.
         """
-        return FileTreeScraper_EAGLE.make_filepath_with_root(self.directory, relative_filepath)
+        return FileTreeScraper_TNG.make_filepath_with_root(self.directory, relative_filepath)
 
     @staticmethod
     def get_alternative_filepath_with_root(directory: str, filepath: str) -> str:
         """
         Get the path to a data file given the original location of the file and the new path to the simulation root.
         """
-        return FileTreeScraper_EAGLE.make_filepath_with_root(directory, FileTreeScraper_EAGLE.relative_filepath(filepath))
+        return FileTreeScraper_TNG.make_filepath_with_root(directory, FileTreeScraper_TNG.relative_filepath(filepath))
 
     def get_alternative_filepath(self, filepath: str) -> str:
         """
         Get the path to a data file given the original location of the file and the new path to the simulation root.
         """
-        return FileTreeScraper_EAGLE.get_alternative_filepath_with_root(self.directory, filepath)
+        return FileTreeScraper_TNG.get_alternative_filepath_with_root(self.directory, filepath)

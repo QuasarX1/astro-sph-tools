@@ -32,6 +32,7 @@ dependencies = [
   "Cython",
   "mendeleev",
 ]
+#  "https://github.com/illustristng/illustris_python.git",
 
 [project.urls]
 Documentation = "https://github.com/QuasarX1/astro-sph-tools#readme"

@@ -8,7 +8,8 @@ import numpy as np
 from unyt import unyt_array
 from pyread_eagle import EagleSnapshot
 import h5py as h5
-from QuasarCode import Console
+from QuasarCode import Console, Settings, Stopwatch
+from QuasarCode.MPI import MPI_Config, mpi_barrier, mpi_gather_array
 
 from ...data_structures._ParticleType import ParticleType
 from ...tools._ArrayReorder import ArrayReorder, ArrayReorder_2
@@ -25,6 +26,8 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
     SUBFIND catalogue data (EAGLE).
     """
 
+    LimitedMode: bool = False
+
     def __init__(
         self,
         membership_filepaths: list[str],
@@ -32,6 +35,18 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
         snapshot: SnapshotEAGLE,
     ) -> None:
         Console.print_debug(f"Loading SUBFIND catalogue data from: \"{membership_filepaths[0]}\" and \"{properties_filepaths[0]}\".")
+        if CatalogueSUBFIND.LimitedMode:
+            Console.print_verbose_warning("CatalogueSUBFIND object being loaded using limited mode - only None will be supported for particle type arguments.")
+
+        if Settings.debug:
+            stopwatch = Stopwatch.start_new("Catalogue Constructor")
+
+            barrier_time = stopwatch.get_elapsed_time_lap()
+        mpi_barrier()
+        if Settings.debug:
+            all_barrier_times = MPI_Config.comm.gather(barrier_time, root = MPI_Config.root)
+            if MPI_Config.is_root:
+                Console.print_debug("Cat init barrier delay:", ", ".join([f"{v - min(all_barrier_times):.1f}" for v in all_barrier_times]))
         
         self.__n_parallel_components_membership = len(membership_filepaths)
         self.__n_parallel_components_properties = len(properties_filepaths)
@@ -40,6 +55,15 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
         self.__membership_files = membership_filepaths#[h5.File(membership_filepath, "r") for membership_filepath in membership_filepaths]
         self.__halo_data_files  = properties_filepaths#[h5.File(properties_filepath, "r") for properties_filepath in properties_filepaths]
 
+        if Settings.debug:
+            barrier_time = stopwatch.get_elapsed_time_lap()
+        mpi_barrier()
+        if Settings.debug:
+            all_barrier_times = MPI_Config.comm.gather(barrier_time, root = MPI_Config.root)
+            if MPI_Config.is_root:
+                Console.print_debug("Cat init barrier delay:", ", ".join([f"{v - min(all_barrier_times):.1f}" for v in all_barrier_times]))
+
+        Console.print_debug("    Loading membership sizes.")
         n_parts_per_file = [None] * self.__n_parallel_components_membership
         for i in range(self.__n_parallel_components_membership):
             with h5.File(self.__membership_files[i], "r") as file:
@@ -51,7 +75,15 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
         self.__membership_file_particle_end_offsets: np.ndarray = np.cumsum(self.__n_membership_particles_per_file, axis = 0, dtype = int)
         self.__membership_file_particle_offsets: np.ndarray = np.row_stack([np.zeros_like(self.__n_total_membership_particles, dtype = int), self.__membership_file_particle_end_offsets[:-1, :]], dtype = int)
 
+        if Settings.debug:
+            barrier_time = stopwatch.get_elapsed_time_lap()
+        mpi_barrier()
+        if Settings.debug:
+            all_barrier_times = MPI_Config.comm.gather(barrier_time, root = MPI_Config.root)
+            if MPI_Config.is_root:
+                Console.print_debug("Cat init barrier delay:", ", ".join([f"{v - min(all_barrier_times):.1f}" for v in all_barrier_times]))
 
+        Console.print_debug("    Loading properties sizes.")
         n_groups_per_file = [None] * self.__n_parallel_components_properties
         for i in range(self.__n_parallel_components_properties):
             try:
@@ -63,7 +95,7 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
                 Console.print_error(f"Error in file: {self.__halo_data_files[i]}")
                 raise e
         if self.__n_total_FOF_groups != sum(n_groups_per_file):
-            Console.print_warning("More FOF haloes in catalogue than reported. Assuming aggrigate number as correct.")
+            Console.print_warning("More FOF haloes in catalogue than reported. Assuming aggregate number as correct.")
             self.__n_total_FOF_groups = sum(n_groups_per_file)
 #        self.__n_total_FOF_groups: int = int(self.__halo_data_files[0]["FOF"].attrs["TotNgroups"])
 #        self.__n_FOF_groups_per_file: np.ndarray = np.array([self.__halo_data_files[i]["FOF"].attrs["Ngroups"] for i in range(self.__n_parallel_components_properties)], dtype = int)
@@ -77,23 +109,42 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
 #        self.__subhalo_data_offsets: np.ndarray = np.array([0, *np.cumsum(self.__subhalo_data_end_offsets, dtype = int)[:-1]], dtype = int)
 
         self.__FOF_groups_containing_parttypes: dict[ParticleType|None, np.ndarray[tuple[int], np.dtype[np.bool_]]] = {}
-        for part_type in ParticleType.get_all():
-            try:
-                group_numbers, _, _, _ = self.get_membership_field(
-                    particle_type = part_type,
-                    field = "GroupNumber",
-                    dtype = np.int64
-                )
-                self.__FOF_groups_containing_parttypes[part_type] = np.unique(group_numbers[group_numbers > 0]) - 1
-            except IOError:
-                self.__FOF_groups_containing_parttypes[part_type] = np.full(self.__n_total_FOF_groups, False, dtype = bool)
+        if not CatalogueSUBFIND.LimitedMode:
+
+            if Settings.debug:
+                barrier_time = stopwatch.get_elapsed_time_lap()
+            mpi_barrier()
+            if Settings.debug:
+                all_barrier_times = MPI_Config.comm.gather(barrier_time, root = MPI_Config.root)
+                if MPI_Config.is_root:
+                    Console.print_debug("Cat init barrier delay:", ", ".join([f"{v - min(all_barrier_times):.1f}" for v in all_barrier_times]))
+
+            Console.print_debug("    Loading particle type membership.")
+            for part_type in ParticleType.get_all():
+                try:
+                    group_numbers, _, _, _ = self.get_membership_field(
+                        particle_type = part_type,
+                        field = "GroupNumber",
+                        dtype = np.int64
+                    )
+                    self.__FOF_groups_containing_parttypes[part_type] = np.unique(group_numbers[group_numbers > 0]) - 1
+                except IOError:
+                    self.__FOF_groups_containing_parttypes[part_type] = np.full(self.__n_total_FOF_groups, False, dtype = bool)
         # Include a 'filter' for no specific type
         self.__FOF_groups_containing_parttypes[None] = np.full(self.__n_total_FOF_groups, True, dtype = bool)
 
         # Pre-calculate the number of haloes for each option
         self.__n_haloes: dict[ParticleType|None, int] = { key : int(self.__FOF_groups_containing_parttypes[key].sum()) for key in self.__FOF_groups_containing_parttypes }
 
-        Console.print_debug("Initialising base class.")
+        if Settings.debug:
+            barrier_time = stopwatch.get_elapsed_time_lap()
+        mpi_barrier()
+        if Settings.debug:
+            all_barrier_times = MPI_Config.comm.gather(barrier_time, root = MPI_Config.root)
+            if MPI_Config.is_root:
+                Console.print_debug("Cat init barrier delay:", ", ".join([f"{v - min(all_barrier_times):.1f}" for v in all_barrier_times]))
+
+        Console.print_debug("    Initialising base class.")
 
         super().__init__(
             membership_filepath = membership_filepaths[0],
@@ -101,7 +152,18 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
             snapshot = snapshot
         )
 
-        Console.print_debug("Done creating SUBFIND catalogue reader.")
+        if Settings.debug:
+            barrier_time = stopwatch.get_elapsed_time_lap()
+        mpi_barrier()
+        if Settings.debug:
+            all_barrier_times = MPI_Config.comm.gather(barrier_time, root = MPI_Config.root)
+            if MPI_Config.is_root:
+                Console.print_debug("Cat init barrier (last) delay:", ", ".join([f"{v - min(all_barrier_times):.1f}" for v in all_barrier_times]))
+
+        if Settings.debug:
+            stopwatch.stop()
+
+        Console.print_debug("    Done creating SUBFIND catalogue reader.")
 
     # Overrides of base class methods for re-typing
 
@@ -117,12 +179,16 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
         return (indexes, indexes)
 
     def get_number_of_haloes(self, particle_type: ParticleType|None = None) -> int:
+        if CatalogueSUBFIND.LimitedMode and particle_type is not None:
+            raise RuntimeError("CatalogueSUBFIND object in limited mode - unable to use particle type arguments other than None.")
         return self.__n_haloes[particle_type]
 
     def get_halo_IDs(self, particle_type: ParticleType|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
         return self.get_halo_indexes(particle_type = particle_type) + 1 # FOF group numbers are just numbers instead of indexes
 
     def get_halo_indexes(self, particle_type: ParticleType|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
+        if CatalogueSUBFIND.LimitedMode and particle_type is not None:
+            raise RuntimeError("CatalogueSUBFIND object in limited mode - unable to use particle type arguments other than None.")
         return np.array(list(range(self.__n_total_FOF_groups)), dtype = np.int64)[self.__FOF_groups_containing_parttypes[particle_type]]
 
     def get_halo_parent_IDs(self, particle_type: ParticleType|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
@@ -218,9 +284,8 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
         )
         return self.snapshot.make_cgs_data("cm", data, h_exp = h_exp, cgs_conversion_factor = cgs, a_exp = a_exp if use_proper_units else 0).to("Mpc")
 
-    #TODO: check this is correct!!!!!!!!!!!!!!
-    def get_halo_IDs_by_snapshot_particle(self, particle_type: ParticleType, include_unbound: bool = True, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
-        group_numbers =  self.snapshot.get_group_ID(particle_type = particle_type, include_unbound = include_unbound)
+    def get_halo_IDs_by_snapshot_particle(self, particle_type: ParticleType, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
+        group_numbers =  self.snapshot.get_group_ID(particle_type = particle_type, include_nearby_unattached_particles = False)
         if snapshot_particle_ids is None:
             return group_numbers.astype(np.int64)
         else:
@@ -231,20 +296,28 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
             Console.print_debug("Done reordering.")
             return result
 
-    def get_halo_indexes_by_snapshot_particle(self, particle_type: ParticleType, include_unbound: bool = True, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
-        Console.print_debug("Reconstructing snapshot order data for halo membership.")
-        if not include_unbound:
-            raise NotImplementedError("include_unbound param not supported for EAGLE data.")
-        group_numbers, _, _, _ = self.get_membership_field(particle_type = particle_type, field = "GroupNumber", dtype = np.int64)
-        fof_group_only_mask = group_numbers > 0 #TODO: is this the cause of the descrepency with the snap data?
-        result =  ArrayReorder.create(
-            self.get_membership_field(particle_type = particle_type, field = "ParticleIDs", dtype = np.int64)[0],
-            snapshot_particle_ids if snapshot_particle_ids is not None else self.snapshot.get_IDs(particle_type),
-            source_order_filter = fof_group_only_mask
-        )(group_numbers, default_value = -1) - 1
-        result[result == -2] = -1
-        Console.print_debug("Done reconstructing.")
-        return result
+    def get_halo_indexes_by_snapshot_particle(self, particle_type: ParticleType, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
+        numbers = self.get_halo_IDs_by_snapshot_particle(particle_type = particle_type, snapshot_particle_ids = snapshot_particle_ids)
+        numbers[numbers == SnapshotEAGLE.EAGLE_MAX_GROUP_NUMBER] = 0
+        return numbers - 1
+
+    def get_halo_IDs_by_all_snapshot_particles(self, particle_type: ParticleType, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]|None:
+        return mpi_gather_array(self.get_halo_IDs_by_snapshot_particle(particle_type = particle_type, snapshot_particle_ids = snapshot_particle_ids))
+
+    def get_halo_indexes_by_all_snapshot_particles(self, particle_type: ParticleType, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]|None:
+        return mpi_gather_array(self.get_halo_indexes_by_snapshot_particle(particle_type = particle_type, snapshot_particle_ids = snapshot_particle_ids))
+#    def get_halo_indexes_by_all_snapshot_particles(self, particle_type: ParticleType, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]|None:
+#        Console.print_debug("Reconstructing snapshot order data for halo membership.")
+#        group_numbers, _, _, _ = self.get_membership_field(particle_type = particle_type, field = "GroupNumber", dtype = np.int64)
+#        fof_group_only_mask = group_numbers > 0 # Only include FOF particles (any -ve value is in the SO radius but not part of FOF)
+#        result =  ArrayReorder.create(
+#            self.get_membership_field(particle_type = particle_type, field = "ParticleIDs", dtype = np.int64)[0],
+#            snapshot_particle_ids if snapshot_particle_ids is not None else self.snapshot.get_IDs(particle_type),
+#            source_order_filter = fof_group_only_mask
+#        )(group_numbers, default_value = -1) - 1
+#        result[result == -2] = -1
+#        Console.print_debug("Done reconstructing.")
+#        return result
 
     def get_particle_IDs(self, particle_type: ParticleType, include_unbound: bool = True) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
         if not include_unbound:
@@ -288,6 +361,8 @@ class CatalogueSUBFIND(CatalogueBase[SimType_EAGLE]):
         )
 
     def get_FOF_field(self, field: str, dtype: type[T], particle_type: ParticleType|None = None) -> tuple[np.ndarray[tuple[int, ...], np.dtype[T]], float, float, float]:
+        if CatalogueSUBFIND.LimitedMode and particle_type is not None:
+            raise RuntimeError("CatalogueSUBFIND object in limited mode - unable to use particle type arguments other than None.")
         Console.print_verbose_info(f"Reading catalogue dataset \"{field}\".")
         with h5.File(self.__halo_data_files[0], "r") as file:
             conversion_values = (

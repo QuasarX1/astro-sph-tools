@@ -104,8 +104,8 @@ async def __main(
 
     #LOGHALOMASSES = [9.0, 10.0, 11.0, 12.0, 13.0, 14.0]
 
-    output_filepath = f"{output_filepath}.{MPI_Config.rank}.hdf5" if (Settings.mpi_avalible and MPI_Config.comm_size > 1) else f"{output_filepath}.hdf5"
-    file_exists: bool = any(MPI_Config.comm.allgather(os.path.exists(output_filepath))) if Settings.mpi_avalible else os.path.exists(output_filepath)
+    output_filepath = f"{output_filepath}.{MPI_Config.rank}.hdf5" if MPI_Config.comm_size > 1 else f"{output_filepath}.hdf5"
+    file_exists: bool = any(MPI_Config.comm.allgather(os.path.exists(output_filepath))) if MPI_Config.comm_size > 1 else os.path.exists(output_filepath)
     if file_exists:
         Console.print_info("Output file already exists.\nCheck for existing data will be performed after loading the snapshot.")
 
@@ -114,6 +114,8 @@ async def __main(
         Console.print_error("Must specify either EAGLE or SWIFT simulation type.")
         Console.print_info("Terminating...")
         return
+    
+    Console.print_info(f"Using sn[{'I' if use_snipshots else 'A'}]pshot files.")
 
     sim_files: FileTreeScraper_EAGLE
     if is_EAGLE:
@@ -127,7 +129,7 @@ async def __main(
         raise NotImplementedError("SWIFT support is not currently implemented.")
     else:
         raise RuntimeError("This should be impossible. Please report this error!")
-    file_number = sim_files.snapshots.find_file_number_from_redshift(target_redshift)
+    file_number = (sim_files.snipshots if use_snipshots else sim_files.snapshots).find_file_number_from_redshift(target_redshift)
     Console.print_info(f"Selected file number {file_number} for target redshift {target_redshift}.")
 
     cat: CatalogueBase
@@ -147,22 +149,17 @@ async def __main(
         with h5.File(output_filepath, "r") as file:
             group_already_exists = root_dataset_name in file
         if not allow_dataset_overwrite:
-            can_continue: bool = not (any(MPI_Config.comm.allgather(group_already_exists)) if Settings.mpi_avalible else group_already_exists)
+            can_continue: bool = not (any(MPI_Config.comm.allgather(group_already_exists)) if MPI_Config.comm_size > 1 else group_already_exists)
             if not can_continue:
                 Console.print_error("Output file already contains a dataset for this redshift.")
                 Console.print_info("Terminating...")
                 return
 
-
-
-
-
-
     box_width = snap.box_size[0].to("Mpc").value
     Console.print_info(f"Box size is {box_width} cMpc.")
 
     Console.print_info("Reading halo masses.")
-    halo_masses = cat.get_halo_masses()
+    halo_masses = cat.get_halo_masses(cat.BasicHaloDefinitions.SO_200_CRIT.value)
 
     Console.print_info("Creating halo mass masks.")
 
@@ -183,11 +180,11 @@ async def __main(
     Console.print_info("Reading snapshot particle positions.")
     particle_positions_this_rank: np.ndarray = snap.get_positions(ParticleType.gas).to("Mpc").value
     Console.print_info("Reading halo IDs.")
-    halo_ids = cat.get_halo_IDs()
+    halo_ids = cat.get_halo_indexes()
     Console.print_info("Reading halo positions.")
-    halo_centres = cat.get_halo_centres().to("Mpc").value
+    halo_centres = cat.get_halo_centres_of_potential().to("Mpc").value
     Console.print_info("Reading halo R_200.")
-    halo_radii = cat.get_halo_radii().to("Mpc").value
+    halo_radii = cat.get_halo_radii(cat.BasicHaloDefinitions.SO_200_CRIT.value).to("Mpc").value
 
     Console.print_info("Allocating memory for result data.")
     particle_nearest_halo_id:       np.ndarray = np.empty(shape = (particle_positions_this_rank.shape[0], len(halo_masks)), dtype = int)

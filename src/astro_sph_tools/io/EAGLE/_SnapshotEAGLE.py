@@ -73,7 +73,7 @@ class SnapshotEAGLE(SnapshotBase[SimType_EAGLE]):
         snap_num = match.group("number")
         is_snipshot = match.group("snap_type_letter") == "i"
 
-        hdf5_reader = HDF5_File(filepath)
+#        hdf5_reader = HDF5_File(filepath)
 
         with HDF5_File(filepath, "r") as hdf5_reader:
             redshift = hdf5_reader["Header"].attrs["Redshift"]
@@ -612,33 +612,33 @@ class SnapshotEAGLE(SnapshotBase[SimType_EAGLE]):
 
 
 
-    def get_group_ID(self, particle_type: ParticleType, include_unbound: bool = True) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
+    def get_group_ID(self, particle_type: ParticleType, include_nearby_unattached_particles: bool = False) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
         """
         EXPEREMENTAL
-        """
 
+        include_nearby_unattached_particles -> Particles in SO (R200???) radius but not in FOF group.
+        """
         group_numbers = typing_cast(np.ndarray[tuple[int], np.dtype[np.int32]], self.__read_dataset(particle_type, "GroupNumber", expected_dtype = np.int32))
 
-        unbound_mask = group_numbers < 0#TODO: is this the right meaning for a -ve group number, or is it like in the SUBFIND reader?????
-        if include_unbound:
+        unbound_mask = group_numbers < 0
+        if include_nearby_unattached_particles:
             group_numbers[unbound_mask] = -group_numbers[unbound_mask]
         else:
             group_numbers[unbound_mask] = self.EAGLE_MAX_GROUP_NUMBER
 
         return group_numbers
 
-    def get_group_index(self, particle_type: ParticleType, include_unbound: bool = True) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
+    def get_group_index(self, particle_type: ParticleType, include_nearby_unattached_particles: bool = False) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
         """
         EXPEREMENTAL
-        """
-        group_numbers = self.get_group_ID(particle_type = particle_type, include_unbound = include_unbound)
 
-        max_number = group_numbers.max() # This is used to indicate no associated halo
+        include_nearby_unattached_particles -> Particles in SO (R200???) radius but not in FOF group.
+        """
+        group_numbers = self.get_group_ID(particle_type = particle_type, include_nearby_unattached_particles = include_nearby_unattached_particles)
+
         group_numbers[group_numbers == self.EAGLE_MAX_GROUP_NUMBER] = 0
 
-        group_indexes = group_numbers - 1
-
-        return group_indexes
+        return group_numbers - 1
 
 
 

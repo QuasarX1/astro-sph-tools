@@ -534,17 +534,19 @@ class CatalogueBase(SimulationDataBase[T_ISimulation]):
         raise NotImplementedError("Attempted to call an abstract method.")
 
     @abstractmethod
-    def get_halo_IDs_by_snapshot_particle(self, particle_type: ParticleType, include_unbound: bool = True, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
+    def get_halo_IDs_by_snapshot_particle(self, particle_type: ParticleType, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
         """
-        Get a list of halo IDs - one for each particle in the snapshot.
+        Get a list of halo IDs - one for each particle in the snapshot (for particles on this MPI
+        rank).
         Particles with no associated halo receive an ID according to the halo ID scheme used.
+
+        Control over what particles are included or excluded in a halo is down to the individual
+        implementation. See alternative methods on the child class type for more specific control
+        over dataset specific options.
 
         Parameters:
             `ParticleType` particle_type:
                 The target particle type.
-            (optional) `bool` include_unbound:
-                Include particles that are unbound from their associated halo.
-                Default is `True`.
             (optional) `np.ndarray[(N,), numpy.int64]|None` snapshot_particle_ids:
                 Specify particular particle IDs to use. This can be either a subset of the snapshot
                 or the full set to avoid unnecessary IO operations (implementation dependant).
@@ -554,17 +556,19 @@ class CatalogueBase(SimulationDataBase[T_ISimulation]):
         """
         raise NotImplementedError("Attempted to call an abstract method.")
     @abstractmethod
-    def get_halo_indexes_by_snapshot_particle(self, particle_type: ParticleType, include_unbound: bool = True, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
+    def get_halo_indexes_by_snapshot_particle(self, particle_type: ParticleType, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
         """
-        Get a list of halo indexes - one for each particle in the snapshot.
+        Get a list of halo indexes - one for each particle in the snapshot (for particles on this
+        MPI rank).
         Particles with no associated halo receive an index of -1.
+
+        Control over what particles are included or excluded in a halo is down to the individual
+        implementation. See alternative methods on the child class type for more specific control
+        over dataset specific options.
 
         Parameters:
             `ParticleType` particle_type:
                 The target particle type.
-            (optional) `bool` include_unbound:
-                Include particles that are unbound from their associated halo.
-                Default is `True`.
             (optional) `np.ndarray[(N,), numpy.int64]|None` snapshot_particle_ids:
                 Specify particular particle IDs to use. This can be either a subset of the snapshot
                 or the full set to avoid unnecessary IO operations (implementation dependant).
@@ -573,6 +577,54 @@ class CatalogueBase(SimulationDataBase[T_ISimulation]):
             The halo index each particle is associated with.
         """
         raise NotImplementedError("Attempted to call an abstract method.")
+
+    @abstractmethod
+    def get_halo_IDs_by_all_snapshot_particles(self, particle_type: ParticleType, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]|None:
+        """
+        Get a list of halo IDs - one for each particle in the snapshot (across all MPI ranks).
+        MPI ranks other than the root MUST call this method but will receive None.
+        Particles with no associated halo receive an ID according to the halo ID scheme used.
+
+        Control over what particles are included or excluded in a halo is down to the individual
+        implementation. See alternative methods on the child class type for more specific control
+        over dataset specific options.
+
+        Parameters:
+            `ParticleType` particle_type:
+                The target particle type.
+            (optional) `np.ndarray[(N,), numpy.int64]|None` snapshot_particle_ids:
+                Specify particular particle IDs to use. This can be either a subset of the snapshot
+                or the full set to avoid unnecessary IO operations (implementation dependant).
+
+        Returns `np.ndarray[(N,), numpy.int64]|None`:
+            The halo ID each particle is associated with.
+            None is returned for all ranks other than the root.
+        """
+        raise NotImplementedError("Attempted to call an abstract method.")
+    @abstractmethod
+    def get_halo_indexes_by_all_snapshot_particles(self, particle_type: ParticleType, snapshot_particle_ids: np.ndarray[tuple[int], np.dtype[np.int64]]|None = None) -> np.ndarray[tuple[int], np.dtype[np.int64]]|None:
+        """
+        Get a list of halo indexes - one for each particle in the snapshot (across all MPI ranks).
+        MPI ranks other than the root MUST call this method but will receive None.
+        Particles with no associated halo receive an index of -1.
+
+        Control over what particles are included or excluded in a halo is down to the individual
+        implementation. See alternative methods on the child class type for more specific control
+        over dataset specific options.
+
+        Parameters:
+            `ParticleType` particle_type:
+                The target particle type.
+            (optional) `np.ndarray[(N,), numpy.int64]|None` snapshot_particle_ids:
+                Specify particular particle IDs to use. This can be either a subset of the snapshot
+                or the full set to avoid unnecessary IO operations (implementation dependant).
+
+        Returns `np.ndarray[(N,), numpy.int64]|None`:
+            The halo index each particle is associated with.
+            None is returned for all ranks other than the root.
+        """
+        raise NotImplementedError("Attempted to call an abstract method.")
+
 
     @abstractmethod
     def get_particle_IDs(self, particle_type: ParticleType, include_unbound: bool = True) -> np.ndarray[tuple[int], np.dtype[np.int64]]:
