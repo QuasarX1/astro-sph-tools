@@ -129,7 +129,7 @@ async def __main(
         raise NotImplementedError("SWIFT support is not currently implemented.")
     else:
         raise RuntimeError("This should be impossible. Please report this error!")
-    file_number = (sim_files.snipshots if use_snipshots else sim_files.snapshots).find_file_number_from_redshift(target_redshift)
+    file_number = (sim_files.snipshot_catalogues if use_snipshots else sim_files.catalogues).find_file_number_from_redshift(target_redshift)
     Console.print_info(f"Selected file number {file_number} for target redshift {target_redshift}.")
 
     cat: CatalogueBase
